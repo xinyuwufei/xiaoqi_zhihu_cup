@@ -35,6 +35,7 @@
     
 ### label_count
 问题标注数统计
+
     number of label : frequecy of topics
 
 
