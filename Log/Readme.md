@@ -4,7 +4,7 @@
     number of descendant node : frequecy of topics    
 
 ### node_dist
-父话题树统计
+父话题数统计
 
     number of ancestor node :frequecy of topics
 
