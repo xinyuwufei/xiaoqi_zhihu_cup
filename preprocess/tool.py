@@ -28,11 +28,15 @@ def load(file):
 		d=json.load(myfile)
 	return d
 
-def dump_csv(d,file):
+def dump_csv(d,file,is_dict=True):
 	with open(file, 'w') as csvfile:
 		writer = csv.writer(csvfile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
-		for key in sorted(d):
-			writer.writerow([key]+d[key])
+		if not is_dict:
+			for x in d:
+				writer.writerow(x)
+		else:
+			for key in sorted(d):
+				writer.writerow([key]+d[key])
 def load_csv(file):
 	
 	with open(file, 'r') as f:

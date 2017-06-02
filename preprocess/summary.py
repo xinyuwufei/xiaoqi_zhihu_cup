@@ -1,5 +1,15 @@
 import tool
 
+def uv_graph_encode():
+	d=[]
+	l=tool.load_csv('./summary/uv_graph.csv')
+	for line in l:
+		if line[0]!='root':
+			d.append([vocab_enc[line[0]]]+[vocab_enc[line[1]]])
+		else:
+			d.append([line[0]]+[vocab_enc[line[1]]])
+
+	tool.dump_csv(d,'./summary/uv_graph_sorted.csv',False)
 def node_ancestors_descendants_count():
 	d=tool.load('./summary/node_ancestors_descendants.json')
 	dd={}
@@ -65,11 +75,19 @@ def node_associations_count(is_remove_0=False):
 	else:
 		tool.dump_csv(d,'./summary/node_associations_count_is_remove_0.csv')
 
+def node_has_intersection():
+	d={}
+	has_intersection=tool.load('./summary/node_has_intersection.json')
+	for inter in has_intersection:
+		d[vocab_enc[inter]]=[len(has_intersection[inter])]+[vocab_enc[x] for x in has_intersection[inter]]
+	tool.dump_csv(d,'./summary/node_has_intersection.csv')
 
 vocab_enc=tool.vocab_encoding()
+# uv_graph_encode()
 
 node_ancestors_descendants_count()
 node_question_belongs_to_ancestors_descendants(False)
 node_question_belongs_to_ancestors_descendants(True)
 node_associations_count(False)
 node_associations_count(True)
+node_has_intersection()

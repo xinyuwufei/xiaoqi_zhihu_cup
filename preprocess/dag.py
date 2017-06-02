@@ -20,8 +20,8 @@ class Doubly_linked_list():
             current_ptr=stack_fringe.pop()
             if current_ptr.data==target:
                 return current_ptr
+            closed.append(current_ptr)
             if not current_ptr.next:
-                closed.append(current_ptr)
                 continue
             for child_ptr in current_ptr.next:
                 if child_ptr not in closed and child_ptr not in stack_fringe:
@@ -52,8 +52,8 @@ class Doubly_linked_list():
             current_ptr=stack_fringe.pop()
             if current_ptr.data!='root':
                 a.append(current_ptr.data)
+            closed.append(current_ptr)
             if not current_ptr.prev:
-                closed.append(current_ptr)
                 continue
             for child_ptr in current_ptr.prev:
                 if child_ptr not in closed and child_ptr not in stack_fringe:
@@ -77,8 +77,8 @@ class Doubly_linked_list():
         while stack_fringe:
             current_ptr=stack_fringe.pop()
             a.append(current_ptr.data)
+            closed.append(current_ptr)
             if not current_ptr.next:
-                closed.append(current_ptr)
                 continue
             for child_ptr in current_ptr.next:
                 if child_ptr not in closed and child_ptr not in stack_fringe:
@@ -87,6 +87,7 @@ class Doubly_linked_list():
 
     def Dfs(self):
         d={}
+        has_intersection={}
         closed = []
         stack_fringe = []
         stack_fringe.append(self.head)
@@ -94,18 +95,21 @@ class Doubly_linked_list():
         while stack_fringe:
             current_ptr = stack_fringe.pop()
             if current_ptr.data != 'root':
+                if len(current_ptr.prev)>1:
+                    has_intersection[current_ptr.data]=[x.data for x in current_ptr.prev]
+                    print(current_ptr.data,len(current_ptr.prev))
                 d[current_ptr.data]=[self.Dfs_find_ancestors(current_ptr)]
                 d[current_ptr.data].append(
                     self.Dfs_find_descendants(current_ptr))
-                print(current_ptr.data,len(d[current_ptr.data][0]),len(d[current_ptr.data][1]))
-
+                # print(current_ptr.data,len(d[current_ptr.data][0]),len(d[current_ptr.data][1]))
+            closed.append(current_ptr)
             if not current_ptr.next:
-                closed.append(current_ptr)
                 continue
             for child_ptr in current_ptr.next:
                 if child_ptr not in closed and child_ptr not in stack_fringe:
                     stack_fringe.append(child_ptr)
         tool.dump(d,'./summary/node_ancestors_descendants.json')
+        tool.dump(has_intersection,'./summary/node_has_intersection.json')
     def append(self, parent,child):
         if self.head is None:
             child_node = Node(child, [], [])
@@ -116,11 +120,9 @@ class Doubly_linked_list():
             # print('parent_node',parent_node,parent)
             # print('looking for child', child)
             child_node = self.Dfs_find(self.head, child)
-
-            # print('child_node', child_node,child)
             if child_node is None:
-                child_node = Node(child, [],[])
-            # child.num += parent_node.num
+                child_node = Node(child,[],[])
+            
             child_node.prev.append(parent_node)
             parent_node.next.append(child_node)
 
