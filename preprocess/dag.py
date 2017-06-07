@@ -1,6 +1,7 @@
 from itertools import chain, combinations
 import tool
 
+
 class Node(object):
     def __init__(self, data, prev, next):
         self.data = data
@@ -77,6 +78,7 @@ class Doubly_linked_list():
         while stack_fringe:
             current_ptr=stack_fringe.pop()
             a.append(current_ptr.data)
+            # a.append(current_ptr)
             closed.append(current_ptr)
             if not current_ptr.next:
                 continue
@@ -91,9 +93,20 @@ class Doubly_linked_list():
         closed = []
         stack_fringe = []
         stack_fringe.append(self.head)
+        g2p=0
 
         while stack_fringe:
             current_ptr = stack_fringe.pop()
+            closed.append(current_ptr)
+            if len(current_ptr.prev)==2:
+                g2p+=1
+            # for i,x in enumerate(current_ptr.next):
+            #
+            #     descendants=self.Dfs_find_descendants(x)
+                # for xx in current_ptr.next[:i]+current_ptr.next[i+1:]:
+                #     if xx in descendants:
+                #         print('found 乱伦:',current_ptr.data,xx.data)
+
             if current_ptr.data != 'root':
                 if len(current_ptr.prev)>1:
                     has_intersection[current_ptr.data]=[x.data for x in current_ptr.prev]
@@ -101,13 +114,14 @@ class Doubly_linked_list():
                 d[current_ptr.data]=[self.Dfs_find_ancestors(current_ptr)]
                 d[current_ptr.data].append(
                     self.Dfs_find_descendants(current_ptr))
-                # print(current_ptr.data,len(d[current_ptr.data][0]),len(d[current_ptr.data][1]))
-            closed.append(current_ptr)
+                print(current_ptr.data,len(d[current_ptr.data][0]),len(d[current_ptr.data][1]))
+
             if not current_ptr.next:
                 continue
             for child_ptr in current_ptr.next:
                 if child_ptr not in closed and child_ptr not in stack_fringe:
                     stack_fringe.append(child_ptr)
+        print('************************g2p',g2p)
         tool.dump(d,'./summary/node_ancestors_descendants.json')
         tool.dump(has_intersection,'./summary/node_has_intersection.json')
     def append(self, parent,child):
@@ -139,9 +153,9 @@ def load_topic_info():
     """
 
     d={}
-
     with open('../data/topic_info.txt', 'r') as f:
         # w.write('Source,Target\n')
+
         for line in f:
             line=line.strip().split('\t')
             child=line[0].strip()
@@ -165,9 +179,19 @@ def load_topic_info():
             for child in value:
                 if child not in d:
                     leafs.add(child)
-        print('# of leafs',len(leafs))
+        print('# of leafs',len(leafs),len(set(d['root']) & leafs))
 
     return d,leafs
+
+    # d=tool.load_csv('./summary/uv_graph_no_incest.csv',True)
+    # print(len(d))
+    # leafs = set()
+    # for key, value in d.items():
+    #     for child in value:
+    #         if child not in d:
+    #             leafs.add(child)
+    # print('# of leafs', len(leafs),len(d['root']))
+    # return d, leafs
 
 
 
@@ -206,6 +230,9 @@ dll.Dfs()
 # dll.append('B','E')
 # dll.append('E','F')
 # dll.append('F','leaf')
+#
+# dll.Dfs()
+
 # ptr = dll.Dfs_find(dll.head, 'F')
 # print(len(ptr.prev))
 # # for x in ptr.next:
