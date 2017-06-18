@@ -49,6 +49,18 @@ def loadName(file_name):
             data.append(lines)
     return data
 
+def loadWeight():
+    path = os.getcwd()
+    file_path = path + "/Data/weight.txt"
+    holder = []
+
+    with open(file_path, "r") as f:
+        for line in f:
+            line = line.replace("\n", "")
+            if line != "":
+                holder.append(float(line))
+    return np.asarray([holder])
+
 class batch_iterator(object):
     def __init__(self, mode, batch_size):
         path = os.getcwd()
@@ -163,7 +175,6 @@ def loadWord2Vec():
 
 #    data = pandas.read_csv(w2vec_part, header = None, sep = " ")
 #    w2vec = data.as_matrix()
-    print(w2vec.shape)
     pad = np.zeros(shape = [1,256])
     p_w2vec = np.concatenate((w2vec, pad), axis = 0)
     return p_w2vec

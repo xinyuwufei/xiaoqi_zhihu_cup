@@ -28,7 +28,7 @@ tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this nor
 tf.app.flags.DEFINE_float("coeff", 1.0, "loss coefficient")
 tf.app.flags.DEFINE_float("dropout", 0.05, "dropout rate")
 tf.app.flags.DEFINE_integer("epochs", 40, "number of epochs")
-tf.app.flags.DEFINE_integer("batch_size", 1, "size of batch")
+tf.app.flags.DEFINE_integer("batch_size", 175, "size of batch")
 tf.app.flags.DEFINE_integer("state_size", 512, "size of each model layer")
 tf.app.flags.DEFINE_integer("att_state_size", 386, "size of each model layer")
 tf.app.flags.DEFINE_integer("sen_state_size", 15, "size of each model layer")
@@ -41,9 +41,10 @@ tf.app.flags.DEFINE_integer("print_every", 1000, "How many iteration to print")
 FLAGS = tf.app.flags.FLAGS
 
 def create_model(session, forward_only):
+    weight = iter_utils.loadWeight()
     model = dataTagger.dataTagger(FLAGS.batch_size, FLAGS.vocab_size, FLAGS.state_size, FLAGS. att_state_size, FLAGS.sen_state_size, FLAGS.max_gradient_norm,
                                 FLAGS.learning_rate, FLAGS.learning_rate_decay_factor, FLAGS.coeff,
-                                FLAGS.dropout, forward_only = forward_only, optimizer = FLAGS.optimizer, word2vec = iter_utils.loadWord2Vec())
+                                FLAGS.dropout, weight, forward_only = forward_only, optimizer = FLAGS.optimizer, word2vec = iter_utils.loadWord2Vec())
     ckpt = tf.train.get_checkpoint_state(os.getcwd() + FLAGS.log_dir)
     if ckpt:
         logging.info("Reading model parameters from %s ." % ckpt.model_checkpoint_path)
@@ -61,9 +62,40 @@ def max_n(arr, n):
     indices = (np.unravel_index(i, arr.shape) for i in indices)
     return [[arr[i], i[0]] for i in indices]
 
+def validate(sess, model, step):
+    test_iterator = iter_utils.batch_iterator("test", FLAGS.batch_size)
+
+    test_cost = 0
+    test_f1 = 0
+
+    for k in range(1000):
+        data, label, label_, seq, mark = test_iterator.next_batch()
+        if(len(data[0]) == 0):
+            data, label, label_, seq, mark = test_iterator.next_batch()
+        cost, accurancy, result = model.validate(sess, data, label, seq, len(label), step, mark)
+        test_cost += cost
+
+        for i in range(FLAGS.batch_size):
+            result_row = result[i]
+            label_row = set(label_[i])
+            pairs = max_n(result_row, 5)
+            pres = [index for prob, index in pairs[::-1]]
+            acc_total = 0
+            for j in range(1, 6):
+                pred = pres[:j]
+                correct = len(set(pred) & label_row)
+                acc = correct / len(pred)
+                acc_total += acc / math.log(j + 1)
+            recall = len(set(pres) & label_row) / len(label_row)
+            f1 = acc_total * recall / (acc_total + recall + 1E-09)
+
+            test_f1 += f1
+
+    print(test_cost / 1000.0)
+    print(test_f1 / (FLAGS.batch_size *1000.0))
+
 def train():
     iterator = iter_utils.batch_iterator("train", FLAGS.batch_size)
-    test_iterator = iter_utils.batch_iterator("test", FLAGS.batch_size)
     with tf.Session() as sess:
         best_epochs = 0
         previous_losses = 0
@@ -97,7 +129,7 @@ def train():
             current_step += 1
             model._global_step = current_step
             lengths = len(label)
-            mean_length = np.mean(lengths)
+            mean_length = 1
             std_length = np.std(lengths)
 
             if not exp_cost:
@@ -107,7 +139,7 @@ def train():
                 exp_cost = 0.99 * exp_cost + 0.01*cost
                 exp_length = 0.99 * exp_length + 0.01*mean_length
 
-            cost = cost/mean_length
+            cost = cost / 1
 
             if global_minimum != 0 and cost < global_minimum:
                 best_epoch = current_step
@@ -121,18 +153,7 @@ def train():
                             (iterator._epochs, current_step, cost, exp_cost / exp_length, tps, mean_length, std_length, sum(train_accurancy) / float(len(train_accurancy))))
                 train_accurancy = []
                 if current_step % 10000 == 0:
-                    test_cost = 0
-                    test_accurancy = 0
-                    for k in range(1000):
-                        data, label, label_, seq, mark = test_iterator.next_batch()
-                        if(len(data[0]) == 0):
-                            data, label, label_, seq, mark = test_iterator.next_batch()
-                        cost, accurancy = model.validate(sess, data, label, seq, len(label), step, mark)
-                        test_cost += cost
-                        test_accurancy += accurancy
-                    print(test_cost / 150000.0)
-                    print(test_accurancy / 1000.0)
-
+                    validate(sess, model, step)
                     s = input("-->:")
                     if s == "1":
                         model._saver.save(sess, checkpoint_path, global_step= current_step)

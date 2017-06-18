@@ -40,12 +40,15 @@ def writeCSV(data):
     for row in data:
         writer.writerow(row)
 
-def pad(data):
-    if len(data) < 6:
-        diff = 6 - len(data)
-        for i in range(diff):
-            data.append(411720)
-    return data
+
+def pad(data, seq):
+    max_len = max(max(seq), 6)
+    result = np.zeros(shape = [FLAGS.batch_size, max_len])
+    result.fill(411720)
+    length = len(result)
+    for i in range(length):
+        result[i][:seq[i]] = data[i]
+    return result
 
 def buildMark(mark):
     length = len(mark)
@@ -56,6 +59,10 @@ def buildMark(mark):
             holder[count][j] = 1
         count += 1
     return holder
+
+def getSeq(data):
+    return [len(i) for i in data]
+
 
 path = os.getcwd()
 file_name = path + "/Data/Eval/name.txt"
@@ -72,48 +79,62 @@ count1 = 0
 
 with tf.Session() as sess:
     model, step = create_model(sess, True)
-    length = len(name_list)
+    validate(sess, model, step)
 
-    for i in range(length):
-        temp = []
-        data, name, mark = data_list[i], name_list[i], mark_list[i]
-        mark = buildMark([mark])
-        if(len(data) > 0):
-            pad_d = pad(data)
-            result = model.test(sess, np.asarray([pad_d]), [len(data)], 1, step, mark)
-            result = max_n(result[0], 5)
-            temp.append(str(name))
+"""
+    length = len(name_list)
+    total = int(length / FLAGS.batch_size)
+
+    for i in range(total):
+        bot = count * FLAGS.batch_size
+        roof = bot + FLAGS.batch_size
+        data, name, mark = data_list[bot:roof], name_list[bot:roof], mark_list[bot:roof]
+        mark = buildMark(mark)
+        seq = getSeq(data)
+        pad_d = pad(data, seq)
+        t_result = model.test(sess, np.asarray(pad_d), (np.asarray(seq)).reshape(-1), FLAGS.batch_size, step, mark)
+
+        check = 0
+        for row in t_result:
+            temp = []
+            result = max_n(row, 5)
+            temp.append(str(name[check]))
             for prob, num in reversed(result):
                 temp.append(str(dict[num]))
             holder.append(temp)
-        else:
-            count1 += 1
-            temp.append(str(name))
-            temp.append(str(-1))
-            temp.append(str(-1))
-            temp.append(str(-1))
-            temp.append(str(-1))
-            temp.append(str(-1))
-            holder.append(temp)
-        if count % 10000 == 0:
+            check += 1
+
+        if count % 100 == 0:
             print("Procee " + str(count))
         count += 1
 
-print(count)
-print(count1)
-writeCSV(holder)
 
+    bot = count * FLAGS.batch_size
+    data, name, mark = data_list[bot:], name_list[bot:], mark_list[bot:]
+    cut = len(data)
+    diff = FLAGS.batch_size - len(data)
+    data1, name1, mark1 = data_list[:diff], name_list[:diff], mark_list[:diff]
+    data += data1
+    name += name1
+    mark += mark1
+
+    mark = buildMark(mark)
+    seq = getSeq(data)
+    pad_d = pad(data, seq)
+
+    t_result = model.test(sess, np.asarray(pad_d), (np.asarray(seq)).reshape(-1), FLAGS.batch_size, step, mark)
+    t_result = t_result[:cut]
+    check = 0
+    for row in t_result:
+        temp = []
+        result = max_n(row, 5)
+        temp.append(str(name[check]))
+        for prob, num in reversed(result):
+            temp.append(str(dict[num]))
+        holder.append(temp)
+        check += 1
+
+print(len(holder))
+
+writeCSV(holder)
 """ 
-    test_iterator = iter_utils.batch_iterator("test", FLAGS.batch_size)
-    test_cost = 0
-    test_accurancy = 0
-    for k in range(1000):
-        data, label, label_, seq, mark = test_iterator.next_batch()
-        if(len(data[0]) == 0):
-            data, label, label_, seq, mark = test_iterator.next_batch()
-        cost, accurancy = model.validate(sess, data, label, seq, len(label), step, mark)
-        test_cost += cost
-        test_accurancy += accurancy
-    print(test_cost / 150000.0)
-    print(test_accurancy / 1000.0)
-"""

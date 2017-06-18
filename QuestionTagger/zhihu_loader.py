@@ -62,7 +62,7 @@ def parseData(num):
     path = os.getcwd()
     voca_name = path + "/Data/embedding_list.txt"
     file_name = path + "/Data/data" + str(num) + ".txt"
-    file_name = path + "/Data/eval0.txt"
+#    file_name = path + "/Data/eval0.txt"
     rev = {}
     count = 0
     with open(voca_name, 'r') as f:
@@ -93,7 +93,7 @@ def parseData(num):
         for line in holder:
             w.write(" ".join(line) + '\n')
 
-parseData(0)
+parseData(3)
 
 def countIdf(file_name, rev, count):
     with open(file_name, 'r') as f:
