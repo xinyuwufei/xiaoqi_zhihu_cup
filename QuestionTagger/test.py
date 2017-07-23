@@ -40,11 +40,19 @@ def writeCSV(data):
     for row in data:
         writer.writerow(row)
 
-
 def pad(data, seq):
     max_len = max(max(seq), 6)
     result = np.zeros(shape = [FLAGS.batch_size, max_len])
     result.fill(411720)
+    length = len(result)
+    for i in range(length):
+        result[i][:seq[i]] = data[i]
+    return result
+
+def pad_c(data, seq):
+    max_len = max(max(seq), 6)
+    result = np.zeros(shape = [FLAGS.batch_size, max_len])
+    result.fill(11973)
     length = len(result)
     for i in range(length):
         result[i][:seq[i]] = data[i]
@@ -67,10 +75,12 @@ def getSeq(data):
 path = os.getcwd()
 file_name = path + "/Data/Eval/name.txt"
 data_name = path + "/Data/Eval/data.txt"
+c_data_name = path + "/Data/Eval/c_data.txt"
 mark_name = path + "/Data/Eval/mark.txt"
 dict = loadDict()
 name_list = iter_utils.loadName(file_name)
 data_list = iter_utils.loadData(data_name)
+c_data_list = iter_utils.loadData(c_data_name)
 mark_list = iter_utils.loadData(mark_name)
 
 holder = []
@@ -79,20 +89,21 @@ count1 = 0
 
 with tf.Session() as sess:
     model, step = create_model(sess, True)
-    validate(sess, model, step)
-
-"""
+#    validate(sess, model, step)
     length = len(name_list)
     total = int(length / FLAGS.batch_size)
 
     for i in range(total):
         bot = count * FLAGS.batch_size
         roof = bot + FLAGS.batch_size
-        data, name, mark = data_list[bot:roof], name_list[bot:roof], mark_list[bot:roof]
+        data, name, mark, c_data = data_list[bot:roof], name_list[bot:roof], mark_list[bot:roof], c_data_list[bot:roof]
         mark = buildMark(mark)
         seq = getSeq(data)
         pad_d = pad(data, seq)
-        t_result = model.test(sess, np.asarray(pad_d), (np.asarray(seq)).reshape(-1), FLAGS.batch_size, step, mark)
+        c_seq = getSeq(c_data)
+        c_pad_d = pad_c(c_data, c_seq)
+
+        t_result = model.test(sess, np.asarray(pad_d), (np.asarray(seq)).reshape(-1), step, mark, np.asarray(c_pad_d), (np.asarray(c_seq)).reshape(-1))
 
         check = 0
         for row in t_result:
@@ -110,19 +121,22 @@ with tf.Session() as sess:
 
 
     bot = count * FLAGS.batch_size
-    data, name, mark = data_list[bot:], name_list[bot:], mark_list[bot:]
+    data, name, mark, c_data = data_list[bot:], name_list[bot:], mark_list[bot:], c_data_list[bot:]
     cut = len(data)
     diff = FLAGS.batch_size - len(data)
-    data1, name1, mark1 = data_list[:diff], name_list[:diff], mark_list[:diff]
+    data1, name1, mark1, c_data1 = data_list[:diff], name_list[:diff], mark_list[:diff], c_data_list[:diff]
     data += data1
     name += name1
     mark += mark1
+    c_data += c_data1
 
     mark = buildMark(mark)
     seq = getSeq(data)
     pad_d = pad(data, seq)
+    c_seq = getSeq(c_data)
+    c_pad_d = pad_c(c_data, c_seq)
 
-    t_result = model.test(sess, np.asarray(pad_d), (np.asarray(seq)).reshape(-1), FLAGS.batch_size, step, mark)
+    t_result = model.test(sess, np.asarray(pad_d), (np.asarray(seq)).reshape(-1), step, mark, np.asarray(c_pad_d), (np.asarray(c_seq)).reshape(-1))
     t_result = t_result[:cut]
     check = 0
     for row in t_result:
@@ -137,4 +151,3 @@ with tf.Session() as sess:
 print(len(holder))
 
 writeCSV(holder)
-""" 

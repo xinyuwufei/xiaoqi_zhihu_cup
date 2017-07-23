@@ -58,6 +58,8 @@ def order_embedding():
         for i in keylist:
             w.write(" ".join(w_dict[i]) + '\n')
 
+#order_embedding()
+
 def parseData(num):
     path = os.getcwd()
     voca_name = path + "/Data/embedding_list.txt"
@@ -93,8 +95,6 @@ def parseData(num):
         for line in holder:
             w.write(" ".join(line) + '\n')
 
-parseData(3)
-
 def countIdf(file_name, rev, count):
     with open(file_name, 'r') as f:
         for line in f:
@@ -115,13 +115,10 @@ def countIdf(file_name, rev, count):
 
 def constructTfIdf():
     path = os.getcwd()
-    voca_name = path + "/Data/embedding_list.txt"
-    file0_name = path + "/Data/data0.txt"
-    file1_name = path + "/Data/data1.txt"
-    file2_name = path + "/Data/data2.txt"
-    file3_name = path + "/Data/data3.txt"
-    file4_name = path + "/Data/eval0.txt"
-    voca_name = path + "/Data/vocabulary.txt"
+    voca_name = path + "/Data/c_embedding_list.txt"
+    file0_name = path + "/Data/train/c_data.txt"
+    file1_name = path + "/Data/test/c_data.txt"
+    file2_name = path + "/Data/Eval/c_data.txt"
 
     rev = {}
     count = 0
@@ -129,8 +126,6 @@ def constructTfIdf():
     rev, count = countIdf(file0_name, rev, count)
     rev, count = countIdf(file1_name, rev, count)
     rev, count = countIdf(file2_name, rev, count)
-    rev, count = countIdf(file3_name, rev, count)
-    rev, count = countIdf(file4_name, rev, count)
 
     key_list = rev.keys()
     for key in sorted(key_list):
@@ -138,13 +133,11 @@ def constructTfIdf():
 
     return rev
 
-def cleanData(num, rev):
+def cleanData(rev, mode):
     path = os.getcwd()
-    voca_name = path + "/Data/embedding_list.txt"
-#    file_name = path + "/Data/data" + str(num) + ".txt"
-#    out_name = path + "/Data/c_data" + str(num) + ".txt"
-    file_name = path + "/Data/eval0.txt"
-    out_name = path + "/Data/c_eval0.txt"
+    voca_name = path + "/Data/c_embedding_list.txt"
+    file_name = path + "/Data/" + mode + "c_data.txt"
+    out_name = path + "/Data/" + mode + "c_re_data.txt"
     holder = []
     with open(file_name, 'r') as f:
         for line in f:
@@ -159,14 +152,15 @@ def cleanData(num, rev):
                     if i != '':
                         count_list.append(int(i))
                 final_list = list(set(count_list))
+                final_list.sort(key = count_list.index)
                 score_list = []
                 length = len(count_list)
                 for i in final_list:
                     ocr = count_list.count(i)
                     tf = ocr / length
                     score_list.append(rev[i] * tf)
-                result = max_n(np.asarray(score_list), 10)
-                result.reverse()
+                result = max_n(np.asarray(score_list), 20)
+                result.sort(key = lambda x: x[1])
                 temp = []
                 for score, index in result:
                     temp.append(str(final_list[index]))
@@ -177,9 +171,10 @@ def cleanData(num, rev):
             w.write(' '.join(i) + '\n')
 
 
-#rev = constructTfIdf()
-#cleanData(0, rev)
-#cleanData(1, rev)
-#cleanData(2, rev)
-#cleanData(3, rev)
+rev = constructTfIdf()
+cleanData(rev, "train/")
+cleanData(rev, "test/")
+cleanData(rev, "Eval/")
+
+
 

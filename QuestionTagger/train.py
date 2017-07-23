@@ -22,13 +22,13 @@ import iter_utils
 import logging
 logging.basicConfig(level=logging.INFO)
 
-tf.app.flags.DEFINE_float("learning_rate", 1e-4, "Learning_rate")
+tf.app.flags.DEFINE_float("learning_rate", 1e-3, "Learning_rate")
 tf.app.flags.DEFINE_float("learning_rate_decay_factor", 0.95, "Learning rate decay")
 tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm")
 tf.app.flags.DEFINE_float("coeff", 1.0, "loss coefficient")
 tf.app.flags.DEFINE_float("dropout", 0.05, "dropout rate")
 tf.app.flags.DEFINE_integer("epochs", 40, "number of epochs")
-tf.app.flags.DEFINE_integer("batch_size", 175, "size of batch")
+tf.app.flags.DEFINE_integer("batch_size", 32, "size of batch")
 tf.app.flags.DEFINE_integer("state_size", 512, "size of each model layer")
 tf.app.flags.DEFINE_integer("att_state_size", 386, "size of each model layer")
 tf.app.flags.DEFINE_integer("sen_state_size", 15, "size of each model layer")
@@ -42,10 +42,22 @@ FLAGS = tf.app.flags.FLAGS
 
 def create_model(session, forward_only):
     weight = iter_utils.loadWeight()
-    model = dataTagger.dataTagger(FLAGS.batch_size, FLAGS.vocab_size, FLAGS.state_size, FLAGS. att_state_size, FLAGS.sen_state_size, FLAGS.max_gradient_norm,
-                                FLAGS.learning_rate, FLAGS.learning_rate_decay_factor, FLAGS.coeff,
-                                FLAGS.dropout, weight, forward_only = forward_only, optimizer = FLAGS.optimizer, word2vec = iter_utils.loadWord2Vec())
+
+    model = dataTagger.dataTagger(
+        FLAGS.batch_size, FLAGS.vocab_size,
+        FLAGS.state_size, FLAGS. att_state_size,
+        FLAGS.sen_state_size, FLAGS.max_gradient_norm,
+        FLAGS.learning_rate, FLAGS.learning_rate_decay_factor,
+        FLAGS.coeff,FLAGS.dropout,
+        weight, forward_only = forward_only, optimizer = FLAGS.optimizer,
+        word2vec = iter_utils.loadWord2Vec("out_embedding.txt"),
+        c_word2vec = iter_utils.loadWord2Vec("c_out_embedding.txt"),
+        w_mask = iter_utils.loadMask(),
+        W = iter_utils.loadW(),
+        V = iter_utils.loadV())
+
     ckpt = tf.train.get_checkpoint_state(os.getcwd() + FLAGS.log_dir)
+
     if ckpt:
         logging.info("Reading model parameters from %s ." % ckpt.model_checkpoint_path)
         model._saver.restore(session, ckpt.model_checkpoint_path)
@@ -55,6 +67,7 @@ def create_model(session, forward_only):
         session.run(tf.global_variables_initializer())
         logging.info("Num params: %d" %sum(v.get_shape().num_elements() for v in tf.trainable_variables()))
         step = 0
+
     return model, step
 
 def max_n(arr, n):
@@ -69,10 +82,10 @@ def validate(sess, model, step):
     test_f1 = 0
 
     for k in range(1000):
-        data, label, label_, seq, mark = test_iterator.next_batch()
+        data, label, label_, seq, mark, c_data, c_seq = test_iterator.next_batch()
         if(len(data[0]) == 0):
-            data, label, label_, seq, mark = test_iterator.next_batch()
-        cost, accurancy, result = model.validate(sess, data, label, seq, len(label), step, mark)
+            data, label, label_, seq, mark, c_data, c_seq = test_iterator.next_batch()
+        cost, accurancy, result = model.validate(sess, data, label, seq, step, mark, c_data, c_seq)
         test_cost += cost
 
         for i in range(FLAGS.batch_size):
@@ -114,11 +127,11 @@ def train():
         train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
 
         while(FLAGS.epochs == 0 or iterator._epochs < FLAGS.epochs):
-            data, label, label_, seq, mark = iterator.next_batch()
+            data, label, label_, seq, mark, c_data, c_seq = iterator.next_batch()
             if(len(data[0]) == 0):
-                data, label, label_, seq, mark = iterator.next_batch()
+                data, label, label_, seq, mark, c_data, c_seq = iterator.next_batch()
             tic = time.time()
-            cost, accurancy, result, summary = model.train(sess, data, label, seq, len(label), step, mark)
+            cost, accurancy, result, summary = model.train(sess, data, label, seq, step, mark, c_data, c_seq)
             train_summary_writer.add_summary(summary, step)
             toc = time.time()
             iter_time = toc - tic
